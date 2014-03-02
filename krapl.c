@@ -1,16 +1,7 @@
-#include <linux/kobject.h>
 #include <linux/sysfs.h>
 #include <linux/module.h>
 #include <linux/init.h>
-#include <linux/kernel.h>
 #include <linux/cpu.h>
-#include <linux/device.h>
-#include <linux/topology.h>
-#include <linux/nodemask.h>
-#include <linux/node.h>
-
-#include <asm/msr.h>
-#include <asm/processor.h>
 
 #define failout(condition, str,error) if (condition) { printk(KERN_INFO str); return error; }
 
