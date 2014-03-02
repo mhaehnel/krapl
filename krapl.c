@@ -51,6 +51,7 @@ static void __rdmsrl(void *arg) {
     return;
 }
 
+//find a representative cpu for the requested node
 static int nodecpu_of_kobj(struct kobject *kobj) {
     int node,i;
     struct cpumask m = CPU_MASK_NONE;
@@ -82,10 +83,8 @@ static int nodecpu_of_kobj(struct kobject *kobj) {
 
 typedef union {
     struct {
-        unsigned power_unit:4;
-        unsigned __dummy:4;
-        unsigned energy_unit:5;
-        unsigned __dummy2:3;
+        unsigned power_unit:4,:4;
+        unsigned energy_unit:5,:3;
         unsigned time_unit:4;
     };
     unsigned long long raw;
@@ -96,13 +95,11 @@ typedef union {
         unsigned limit_1:15;
         unsigned enable_limit_1:1;
         unsigned clamping_limit_1:1;
-        unsigned time_window_1:7;
-        unsigned _dummy:8;
+        unsigned time_window_1:7,:0;
         unsigned limit_2:15;
         unsigned enable_limit_2:1;
         unsigned clamping_limit_2:1;
-        unsigned time_window_2:7;
-        unsigned _dummy2:7;
+        unsigned time_window_2:7,:7;
         unsigned lock:1;
     };
     unsigned long long raw;
@@ -117,12 +114,9 @@ typedef union {
 
 typedef union {
     struct {
-        unsigned thermal_spec_power:15;
-        unsigned _dummy:1;
-        unsigned min_power:15;
-        unsigned _dummy2:1;
-        unsigned max_power:15;
-        unsigned _dummy3:1;
+        unsigned thermal_spec_power:15,:1;
+        unsigned min_power:15,:1;
+        unsigned max_power:15,:1;
         unsigned max_time_window:6;
     };
     unsigned long long raw;
@@ -140,8 +134,7 @@ typedef union {
         unsigned limit:15;
         unsigned enable_limit:1;
         unsigned clamping_limit:1;
-        unsigned time_window:7;
-        unsigned _dummy:7;
+        unsigned time_window:7,:7;
         unsigned lock:1;
     };
     unsigned long long raw;
