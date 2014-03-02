@@ -45,6 +45,12 @@ typedef struct {
     unsigned long long *raw;
 } msr_query;
 
+static void __wrmsrl(void *arg) {
+    msr_query *q = (msr_query*)arg;
+    wrmsrl(q->msr,*(q->raw));
+    return;
+}
+
 static void __rdmsrl(void *arg) {
     msr_query *q = (msr_query*)arg;
     rdmsrl(q->msr,*(q->raw));
@@ -69,16 +75,37 @@ static int nodecpu_of_kobj(struct kobject *kobj) {
     return first_cpu(m);
 }
 
-#define CREATE_REG_ATTR_RO(name,obj,domain,reg) \
+#define CREATE_SHOW(name,obj,domain,reg) \
     static ssize_t show_##name##_##domain(struct kobject *kobj, struct kobj_attribute *attr, char *buf) { \
         obj tmp; int cpu; \
         msr_query q = { .msr = reg, .raw = &(tmp.raw) }; \
         if ((cpu = nodecpu_of_kobj(kobj)) < 0) return cpu;\
         smp_call_function_single(cpu,__rdmsrl, (void*)&q,true); \
         return sprintf(buf,"%u\n",tmp.name); \
-    }; \
+    } \
+
+#define CREATE_WRITE(name,obj,domain,reg) \
+    static ssize_t write_##name##_##domain(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count) { \
+        obj tmp; int cpu; unsigned long val; int err;\
+        msr_query q = { .msr = reg, .raw = &(tmp.raw) }; \
+        if ((cpu = nodecpu_of_kobj(kobj)) < 0) return cpu;\
+        smp_call_function_single(cpu,__rdmsrl, (void*)&q,true); \
+	err = kstrtoul(buf,10,&val); \
+	failout(err, "Invalid input", -EINVAL); \
+	tmp.name = val; \
+        smp_call_function_single(cpu,__wrmsrl, (void*)&q,true); \
+	return count; \
+    } \
+
+#define CREATE_REG_ATTR_RO(name,obj,domain,reg) \
+    CREATE_SHOW(name,obj,domain,reg); \
     static struct kobj_attribute name##_##domain##_attribute = __ATTR(name,0444,show_##name##_##domain, NULL);
 
+#define CREATE_REG_ATTR_RW(name,obj,domain,reg) \
+    CREATE_SHOW(name,obj,domain,reg); \
+    CREATE_WRITE(name,obj,domain,reg); \
+    static struct kobj_attribute name##_##domain##_attribute = __ATTR(name,0664,show_##name##_##domain, write_##name##_##domain);
+	
 #define GET_ATTR(name,obj) &name##_##obj##_attribute.attr
 
 typedef union {
@@ -162,7 +189,7 @@ MK_POWER_UNIT(power_unit)
 #undef MK_POWER_UNIT
 
 //PKG Power Limit
-#define MK_POWER_LIMIT(name) CREATE_REG_ATTR_RO(name,pkg_power_limit_struct,pkg,RAPL_PKG+RAPL_POWER_LIMIT)
+#define MK_POWER_LIMIT(name) CREATE_REG_ATTR_RW(name,pkg_power_limit_struct,pkg,RAPL_PKG+RAPL_POWER_LIMIT)
 MK_POWER_LIMIT(limit_1);
 MK_POWER_LIMIT(enable_limit_1);
 MK_POWER_LIMIT(clamping_limit_1);
@@ -189,7 +216,7 @@ MK_POWER_INFO(max_time_window);
 CREATE_REG_ATTR_RO(throttle_time,pkg_perf_status_struct,pkg,RAPL_PKG+RAPL_PERF_STATUS);
 
 //PP0 Power Limit
-#define MK_POWER_LIMIT(name) CREATE_REG_ATTR_RO(name,pp_power_limit_struct,pp0,RAPL_PP0+RAPL_POWER_LIMIT)
+#define MK_POWER_LIMIT(name) CREATE_REG_ATTR_RW(name,pp_power_limit_struct,pp0,RAPL_PP0+RAPL_POWER_LIMIT)
 MK_POWER_LIMIT(limit);
 MK_POWER_LIMIT(enable_limit);
 MK_POWER_LIMIT(clamping_limit);
@@ -201,13 +228,13 @@ MK_POWER_LIMIT(lock);
 CREATE_REG_ATTR_RO(energy,pp_energy_status_struct,pp0,RAPL_PP0+RAPL_ENERGY_STATUS);
 
 //PP0 Policy (only on non-servers)
-CREATE_REG_ATTR_RO(priority,pp_policy_struct,pp0,RAPL_PP0+RAPL_POLICY);
+CREATE_REG_ATTR_RW(priority,pp_policy_struct,pp0,RAPL_PP0+RAPL_POLICY);
 
 //PP0 Perf Status (only on non-servers)
 CREATE_REG_ATTR_RO(throttle_time,pp_perf_status_struct,pp0,RAPL_PP0+RAPL_PERF_STATUS);
 
 //PP1 Power Limit (only on non-servers)
-#define MK_POWER_LIMIT(name) CREATE_REG_ATTR_RO(name,pp_power_limit_struct,pp1,RAPL_PP1+RAPL_POWER_LIMIT)
+#define MK_POWER_LIMIT(name) CREATE_REG_ATTR_RW(name,pp_power_limit_struct,pp1,RAPL_PP1+RAPL_POWER_LIMIT)
 MK_POWER_LIMIT(limit);
 MK_POWER_LIMIT(enable_limit);
 MK_POWER_LIMIT(clamping_limit);
@@ -219,10 +246,10 @@ MK_POWER_LIMIT(lock);
 CREATE_REG_ATTR_RO(energy,pp_energy_status_struct,pp1,RAPL_PP1+RAPL_ENERGY_STATUS);
 
 //PP1 Policy (only on non-servers)
-CREATE_REG_ATTR_RO(priority,pp_policy_struct,pp1,RAPL_PP1+RAPL_POLICY);
+CREATE_REG_ATTR_RW(priority,pp_policy_struct,pp1,RAPL_PP1+RAPL_POLICY);
 
 //DRAM Power Limit (only on servers)
-#define MK_POWER_LIMIT(name) CREATE_REG_ATTR_RO(name,dram_power_limit_struct,dram,RAPL_DRAM+RAPL_POWER_LIMIT)
+#define MK_POWER_LIMIT(name) CREATE_REG_ATTR_RW(name,dram_power_limit_struct,dram,RAPL_DRAM+RAPL_POWER_LIMIT)
 MK_POWER_LIMIT(limit);
 MK_POWER_LIMIT(enable_limit);
 MK_POWER_LIMIT(clamping_limit);
