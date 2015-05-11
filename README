@@ -1,1 +1,5 @@
 this requires NUMA support in the kernel
+
+For more information on the domains and the counter values please refer to the
+Intel Architectures Software Developer System Programing Manual.
+
