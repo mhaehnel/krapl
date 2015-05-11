@@ -23,8 +23,8 @@ if [ $# -eq 2 ]; then
 	DOMAIN=$2
 fi
 
-UNIT=$(< /sys/devices/system/rapl/rapl$DOMAIN/energy_unit)
-VAL1=$(< /sys/devices/system/rapl/rapl$DOMAIN/$1/energy)
+UNIT=$(cat /sys/devices/system/rapl/rapl$DOMAIN/energy_unit)
+VAL1=$(cat /sys/devices/system/rapl/rapl$DOMAIN/$1/energy)
 sleep $(echo $PRECISION*0.01 | $BC -l)
-VAL2=$(< /sys/devices/system/rapl/rapl$DOMAIN/$1/energy)
+VAL2=$(cat /sys/devices/system/rapl/rapl$DOMAIN/$1/energy)
 echo "($VAL2 - $VAL1)/(2^$UNIT) * 100/$PRECISION" | $BC -l
