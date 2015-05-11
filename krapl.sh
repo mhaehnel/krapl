@@ -1,11 +1,11 @@
-#!/bin/env sh
+#!/usr/bin/env sh
 
 BC=$(which bc 2>/dev/null)
 DOMAIN=0
 #This value goes from 1 - 100. Higher value means higher precision but longer measurement time!
 PRECISION=100
 
-if [ $? == 1 ]; then
+if [ $? -eq 1 ]; then
 	echo "This program requires bc (bash calculator)"
 	exit -2
 fi
