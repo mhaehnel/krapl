@@ -68,11 +68,11 @@ static int nodecpu_of_kobj(struct kobject *kobj) {
                 break;
             }
         }
-        if (!cpus_empty(m)) break;
+        if (!cpumask_empty(&m)) break;
     }
-    if (cpus_empty(m))
-        failout(cpus_empty(m),"No cpus on node!\n",-ENODEV);
-    return first_cpu(m);
+    if (cpumask_empty(&m))
+        failout(cpumask_empty(&m),"No cpus on node!\n",-ENODEV);
+    return cpumask_first(&m);
 }
 
 #define CREATE_SHOW(name,obj,domain,reg) \
